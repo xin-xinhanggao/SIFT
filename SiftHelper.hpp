@@ -19,6 +19,6 @@ void siftWrapper(const Mat &img, vector<KeyPoint> &keypoints, Mat &descriptor);
  * @param img2   [2nd image's path]
  * @param output [match result]
  */
-void match2img(const char *img1, const char *img2, Mat &output);
+void match2img(const char *img1, const char *img2, Mat &output, Mat &feature);
 
 #endif
