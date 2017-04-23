@@ -12,7 +12,7 @@
  */
 void siftWrapper(const Mat &img, vector<KeyPoint> &keypoints, Mat &descriptor);
 
-void kmeans(vector<Point2f> bad_feature, int cluster_num, Mat &feature);
+void kmeans(vector<Point2f> bad_feature, vector<Point2f> good_feature, int cluster_num, Mat &feature);
 /**
  * [match 2 image]
  *

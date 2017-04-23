@@ -14,7 +14,7 @@ void siftWrapper(const Mat &img, vector<KeyPoint> &keypoints, Mat &descriptor) {
 	extractSiftFeatures(gray_img, keypoints, descriptor);
 }
 
-void kmeans(vector<Point2f> bad_feature, int cluster_num, Mat &feature)
+void kmeans(vector<Point2f> bad_feature, vector<Point2f> good_feature, int cluster_num, Mat &feature)
 {
 	vector<Point2f> *cluster = new vector<Point2f>[cluster_num]; // initial cluster class
 
@@ -72,6 +72,7 @@ void kmeans(vector<Point2f> bad_feature, int cluster_num, Mat &feature)
     }
 
     //distribute the point to the cluster according to the final center
+
     for(vector<Point2f>::iterator it = bad_feature.begin(); it != bad_feature.end(); it++)
 	{
 		double distance = (center[0].x - it->x) * (center[0].x - it->x) + (center[0].y - it->y) * (center[0].y - it->y);;
@@ -85,14 +86,15 @@ void kmeans(vector<Point2f> bad_feature, int cluster_num, Mat &feature)
 				cluster_index = i;
 			}
 		}
-		cluster[cluster_index].push_back(*it);
+		if(distance < 30000)
+			cluster[cluster_index].push_back(*it);
 	}
 
 	set<int> cluster_size;
 	for(int i = 0; i < cluster_num; i++)
 		cluster_size.insert(cluster[i].size());
 
-	int choose_num  = 4;
+	int choose_num  = 9;
 
 	int num = 0;
 	int *max_size = new int[choose_num];
@@ -139,6 +141,16 @@ void kmeans(vector<Point2f> bad_feature, int cluster_num, Mat &feature)
 				feature.at<Vec3b>(row, col) = color;
 			}
 
+			/*
+			int good_count = 0;
+			for(vector<Point2f>::iterator it = good_feature.begin(); it != good_feature.end(); it++)
+			{
+				if(lx < it->x && mx > it->x && ly < it->y && my > it->y)
+					good_count++;
+			}
+			std::cout<<"good_count: "<<cluster[i].size() - 2 * good_count<<std::endl;
+			*/
+
 			if(cluster_size.count(cluster[i].size()) == 1)
 			{
 				int lxc = lx;
@@ -184,11 +196,14 @@ void match2img(const char *img1_p, const char *img2_p, Mat &output, Mat &feature
 	std::cout<<matches.size()<<std::endl;
 
 	set<int> good_index;
+	vector<Point2f> good_feature;
+
 	vector<DMatch> good_matches;
 	for (size_t i = 0; i < matches.size(); i ++) {
 		if (matches[i][0].distance < 0.8 * matches[i][1].distance) {
 			good_matches.push_back(matches[i][0]);
 			good_index.insert(matches[i][0].trainIdx);
+			good_feature.push_back(Point2f(keypoints2[matches[i][0].trainIdx].pt.y, keypoints2[matches[i][0].trainIdx].pt.x));
 		}
 	}
 
@@ -204,8 +219,8 @@ void match2img(const char *img1_p, const char *img2_p, Mat &output, Mat &feature
 
 	std::cout<<good_matches.size()<<std::endl;
 
-	int cluster_num = 16;
-	kmeans(bad_feature, cluster_num, feature);
+	int cluster_num = 9;
+	kmeans(bad_feature, good_feature, cluster_num, feature);
 
 	drawMatches(img1, keypoints1, img2, keypoints2, good_matches, output, Scalar::all(-1), Scalar::all(-1),
 	            vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
