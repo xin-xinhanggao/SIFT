@@ -19,62 +19,67 @@ void kmeans(vector<Point2f> bad_feature, int cluster_num, Mat &feature)
 	vector<Point2f> *cluster = new vector<Point2f>[cluster_num]; // initial cluster class
 
 	Point2f *center = new Point2f[cluster_num]; // init center for all points
-	int sqrtSamps = (int)sqrtf(1.f * cluster_num);
-    for (int i = 0; i < sqrtSamps; ++i)
-        for (int j = 0; j < sqrtSamps; ++j) 
-        {
-            float x = (1.f * rand() / RAND_MAX + 1.f * i) / float(sqrtSamps);
-            float y = (1.f * rand() / RAND_MAX + 1.f * j) / float(sqrtSamps);
-            center[i * sqrtSamps + j].x = x;
-            center[i * sqrtSamps + j].y = y;
-        }
+	set<int> centerinit; //center init
+	while(centerinit.size() < cluster_num)
+	{
+		int point_index = rand() % bad_feature.size();
+		centerinit.insert(point_index);
+	}
+
+	int centerindex = 0;
+	for(set<int>::iterator it = centerinit.begin(); it != centerinit.end(); it++)
+	{
+		center[centerindex++] = bad_feature[*it];
+	}
+
 
     Point2f *newcenter = new Point2f[cluster_num]; // the new center for iteration
-    int *newsize = new int[cluster_num];
-    for(int iter = 0; iter < 0; iter++)
+    double *totalweight = new double[cluster_num];
+    for(int iter = 0; iter < 100; iter++)
     {
     	for(int i = 0; i < cluster_num; i++)
     	{
-    		newsize[i] = 0;
+    		totalweight[i] = 0;
     		newcenter[i].x = newcenter[i].y = 0;
     	}
 
 
     	for(vector<Point2f>::iterator it = bad_feature.begin(); it != bad_feature.end(); it++)
     	{
-    		double distance = 0;
+    		double distance = (center[0].x - it->x) * (center[0].x - it->x) + (center[0].y - it->y) * (center[0].y - it->y);
     		int cluster_index = 0;
-    		for(int i = 0; i < cluster_num; i++)
+    		for(int i = 1; i < cluster_num; i++)
     		{
     			double d = (center[i].x - it->x) * (center[i].x - it->x) + (center[i].y - it->y) * (center[i].y - it->y);
-    			if(d > distance)
+    			if(d < distance)
     			{
     				distance = d;
     				cluster_index = i;
     			}
     		}
-    		newsize[cluster_index]++;
-    		newcenter[cluster_index].x += it->x;
-    		newcenter[cluster_index].y += it->y;
+    		double weight = 1.0 / (1 + sqrtf(distance));
+    		totalweight[cluster_index] += weight;
+    		newcenter[cluster_index].x += it->x * weight;
+    		newcenter[cluster_index].y += it->y * weight;
     	}
 
     	//modify the original center
     	for(int i = 0; i < cluster_num; i++)
     	{
-    		center[i].x = newcenter[i].x * 1.0 / newsize[i];
-    		center[i].y = newcenter[i].y * 1.0 / newsize[i];
+    		center[i].x = newcenter[i].x * 1.0 / totalweight[i];
+    		center[i].y = newcenter[i].y * 1.0 / totalweight[i];
     	}
     }
 
     //distribute the point to the cluster according to the final center
     for(vector<Point2f>::iterator it = bad_feature.begin(); it != bad_feature.end(); it++)
 	{
-		double distance = 0;
+		double distance = (center[0].x - it->x) * (center[0].x - it->x) + (center[0].y - it->y) * (center[0].y - it->y);;
 		int cluster_index = 0;
-		for(int i = 0; i < cluster_num; i++)
+		for(int i = 1; i < cluster_num; i++)
 		{
 			double d = (center[i].x - it->x) * (center[i].x - it->x) + (center[i].y - it->y) * (center[i].y - it->y);
-			if(d > distance)
+			if(d < distance)
 			{
 				distance = d;
 				cluster_index = i;
@@ -85,9 +90,9 @@ void kmeans(vector<Point2f> bad_feature, int cluster_num, Mat &feature)
 
 	for(int i = 0; i < cluster_num; i++)
 	{
-		Vec3b color(245.0 * i / cluster_num, 245.0 * i / cluster_num, 245.0 * i / cluster_num);
+		Vec3b color(0,255,0);
 		std::cout<<i<<" "<<cluster[i].size()<<std::endl;
-		if(cluster[i].size() > 500)
+		if(cluster[i].size() > 0)
 		{
 			double lx = 1.0, ly = 1.0;
 			double mx = 0.0, my = 0.0;
