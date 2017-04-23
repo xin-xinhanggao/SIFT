@@ -35,7 +35,7 @@ void kmeans(vector<Point2f> bad_feature, int cluster_num, Mat &feature)
 
     Point2f *newcenter = new Point2f[cluster_num]; // the new center for iteration
     double *totalweight = new double[cluster_num];
-    for(int iter = 0; iter < 100; iter++)
+    for(int iter = 0; iter < 1000; iter++)
     {
     	for(int i = 0; i < cluster_num; i++)
     	{
@@ -88,13 +88,36 @@ void kmeans(vector<Point2f> bad_feature, int cluster_num, Mat &feature)
 		cluster[cluster_index].push_back(*it);
 	}
 
+	set<int> cluster_size;
+	for(int i = 0; i < cluster_num; i++)
+		cluster_size.insert(cluster[i].size());
+
+	int choose_num  = 4;
+
+	int num = 0;
+	int *max_size = new int[choose_num];
+	for(set<int>::reverse_iterator it = cluster_size.rbegin(); it != cluster_size.rend(); it++)
+	{
+		if(num < choose_num)
+		{
+			max_size[num] = *it;
+		}
+		else 
+			break;
+		num++;
+	}
+
+	cluster_size.clear();
+	for(int i = 0; i < choose_num; i++)
+		cluster_size.insert(max_size[i]);
+
 	for(int i = 0; i < cluster_num; i++)
 	{
 		Vec3b color(0,255,0);
 		std::cout<<i<<" "<<cluster[i].size()<<std::endl;
 		if(cluster[i].size() > 0)
 		{
-			double lx = 1.0, ly = 1.0;
+			double lx = 1000000.0, ly = 1000000.0;
 			double mx = 0.0, my = 0.0;
 
 			for(vector<Point2f>::iterator it = cluster[i].begin(); it != cluster[i].end(); it++)
@@ -111,26 +134,29 @@ void kmeans(vector<Point2f> bad_feature, int cluster_num, Mat &feature)
 				if(it->y > my)
 					my = it->y;
 
-				int row = feature.rows * it->x;
-				int col = feature.cols * it->y;
+				int row = it->x;
+				int col = it->y;
 				feature.at<Vec3b>(row, col) = color;
 			}
 
-			int lxc = lx * feature.rows;
-			int mxc = mx * feature.rows;
-			int lyc = ly * feature.cols;
-			int myc = my * feature.cols;
-
-			for(int i = lxc; i < mxc; i++)
+			if(cluster_size.count(cluster[i].size()) == 1)
 			{
-				feature.at<Vec3b>(i, lyc) = Vec3b(0,0,255);
-				feature.at<Vec3b>(i, myc) = Vec3b(0,0,255);
-			}
+				int lxc = lx;
+				int mxc = mx;
+				int lyc = ly;
+				int myc = my;
 
-			for(int i = lyc; i < myc; i++)
-			{
-				feature.at<Vec3b>(lxc, i) = Vec3b(0,0,255);
-				feature.at<Vec3b>(mxc, i) = Vec3b(0,0,255);
+				for(int i = lxc; i < mxc; i++)
+				{
+					feature.at<Vec3b>(i, lyc) = Vec3b(0,0,255);
+					feature.at<Vec3b>(i, myc) = Vec3b(0,0,255);
+				}
+
+				for(int i = lyc; i < myc; i++)
+				{
+					feature.at<Vec3b>(lxc, i) = Vec3b(0,0,255);
+					feature.at<Vec3b>(mxc, i) = Vec3b(0,0,255);
+				}
 			}
 		}
 	}
@@ -172,7 +198,7 @@ void match2img(const char *img1_p, const char *img2_p, Mat &output, Mat &feature
 		if(good_index.count(i) == 0)
 		{
 			//bad match features here
-			bad_feature.push_back(Point2f(keypoints1[i].pt.y / feature.rows, keypoints1[i].pt.x / feature.cols));
+			bad_feature.push_back(Point2f(keypoints1[i].pt.y, keypoints1[i].pt.x));
 		}
 	}
 
