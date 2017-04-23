@@ -1,6 +1,6 @@
 #include <opencv2/nonfree/features2d.hpp>
 
-#include "SiftHelper.hpp"
+#include "match.hpp"
 
 int main() {
 	Mat match_out;

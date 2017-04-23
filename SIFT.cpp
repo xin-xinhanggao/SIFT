@@ -2,7 +2,7 @@
 #include <algorithm>
 
 #include "SIFT.hpp"
-#include "__SIFT.hpp"
+#include "siftfunction.hpp"
 #include <iostream>
 
 void extractSiftFeatures(const Mat &img, vector<KeyPoint> &keypoints, Mat &descriptor, int intervals, double sigma,

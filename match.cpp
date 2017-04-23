@@ -1,6 +1,6 @@
 #include <opencv2/nonfree/features2d.hpp>
 
-#include "SiftHelper.hpp"
+#include "match.hpp"
 #include <set>
 #include <cstdlib>
 #include <ctime>
@@ -75,6 +75,7 @@ void kmeans(vector<Point2f> bad_feature, vector<Point2f> good_feature, int clust
 
     for(vector<Point2f>::iterator it = bad_feature.begin(); it != bad_feature.end(); it++)
 	{
+		Vec3b color(0,255,0);
 		double distance = (center[0].x - it->x) * (center[0].x - it->x) + (center[0].y - it->y) * (center[0].y - it->y);;
 		int cluster_index = 0;
 		for(int i = 1; i < cluster_num; i++)
@@ -86,6 +87,9 @@ void kmeans(vector<Point2f> bad_feature, vector<Point2f> good_feature, int clust
 				cluster_index = i;
 			}
 		}
+		int row = it->x;
+		int col = it->y;
+		feature.at<Vec3b>(row, col) = color;
 		if(distance < 30000)
 			cluster[cluster_index].push_back(*it);
 	}
@@ -123,7 +127,7 @@ void kmeans(vector<Point2f> bad_feature, vector<Point2f> good_feature, int clust
 			if(lx < it->x && mx > it->x && ly < it->y && my > it->y)
 				good_count++;
 		}
-		weight[i] = weight[i] - 3 * good_count;
+		weight[i] = weight[i] - 5 * good_count;
 	}
 
 	for(int i = 0; i < cluster_num; i++)
@@ -141,11 +145,17 @@ void kmeans(vector<Point2f> bad_feature, vector<Point2f> good_feature, int clust
 			}
 		}
 
+	/*
+	for(int i = 0; i < cluster_num; i++)
+	{
+		std::cout<<max_index[i]<<" "<<cluster[max_index[i]].size()<<" "<<weight[i]<<std::endl;
+	}
+	std::cout<<std::endl;
+	*/
+		
 	for(int i = 0; i < choose_num; i++)
 	{
 		int now_index = max_index[i];
-		Vec3b color(0,255,0);
-		std::cout<<now_index<<" "<<cluster[now_index].size()<<std::endl;
 		if(cluster[now_index].size() > 0)
 		{
 			double lx = 1000000.0, ly = 1000000.0;
@@ -164,10 +174,6 @@ void kmeans(vector<Point2f> bad_feature, vector<Point2f> good_feature, int clust
 
 				if(it->y > my)
 					my = it->y;
-
-				int row = it->x;
-				int col = it->y;
-				feature.at<Vec3b>(row, col) = color;
 			}
 
 			int lxc = lx;
@@ -209,8 +215,6 @@ void match2img(const char *img1_p, const char *img2_p, Mat &output, Mat &feature
 	vector<vector<DMatch> > matches;
 	matcher.knnMatch(descriptor1, descriptor2, matches, 2);
 
-	std::cout<<matches.size()<<std::endl;
-
 	set<int> good_index;
 	vector<Point2f> good_feature;
 
@@ -232,8 +236,6 @@ void match2img(const char *img1_p, const char *img2_p, Mat &output, Mat &feature
 			bad_feature.push_back(Point2f(keypoints2[i].pt.y, keypoints2[i].pt.x));
 		}
 	}
-
-	std::cout<<good_matches.size()<<std::endl;
 
 	int cluster_num = 9;
 	kmeans(bad_feature, good_feature, cluster_num, feature);
