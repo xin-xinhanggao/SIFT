@@ -193,12 +193,12 @@ void match2img(const char *img1_p, const char *img2_p, Mat &output, Mat &feature
 	}
 
 	vector<Point2f> bad_feature;
-	for(int i = 0; i < keypoints1.size(); i++)
+	for(int i = 0; i < keypoints2.size(); i++)
 	{
 		if(good_index.count(i) == 0)
 		{
 			//bad match features here
-			bad_feature.push_back(Point2f(keypoints1[i].pt.y, keypoints1[i].pt.x));
+			bad_feature.push_back(Point2f(keypoints2[i].pt.y, keypoints2[i].pt.x));
 		}
 	}
 
