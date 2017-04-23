@@ -90,39 +90,68 @@ void kmeans(vector<Point2f> bad_feature, vector<Point2f> good_feature, int clust
 			cluster[cluster_index].push_back(*it);
 	}
 
-	set<int> cluster_size;
+	int choose_num  = 3;
+
+	int *max_index = new int[cluster_num];
+	double *weight = new double[cluster_num];
 	for(int i = 0; i < cluster_num; i++)
-		cluster_size.insert(cluster[i].size());
-
-	int choose_num  = 9;
-
-	int num = 0;
-	int *max_size = new int[choose_num];
-	for(set<int>::reverse_iterator it = cluster_size.rbegin(); it != cluster_size.rend(); it++)
 	{
-		if(num < choose_num)
+		max_index[i] = i;
+		weight[i] = cluster[i].size();
+
+		double lx = 1000000.0, ly = 1000000.0;
+		double mx = 0.0, my = 0.0;
+
+		for(vector<Point2f>::iterator it = cluster[i].begin(); it != cluster[i].end(); it++)
 		{
-			max_size[num] = *it;
+			if(it->x < lx)
+				lx = it->x;
+
+			if(it->y < ly)
+				ly = it->y;
+
+			if(it->x > mx)
+				mx = it->x;
+
+			if(it->y > my)
+				my = it->y;
 		}
-		else 
-			break;
-		num++;
+
+		int good_count = 0;
+		for(vector<Point2f>::iterator it = good_feature.begin(); it != good_feature.end(); it++)
+		{
+			if(lx < it->x && mx > it->x && ly < it->y && my > it->y)
+				good_count++;
+		}
+		weight[i] = weight[i] - 3 * good_count;
 	}
 
-	cluster_size.clear();
-	for(int i = 0; i < choose_num; i++)
-		cluster_size.insert(max_size[i]);
-
 	for(int i = 0; i < cluster_num; i++)
+		for(int j = i + 1; j < cluster_num; j++)
+		{
+			if(weight[j] > weight[i])
+			{
+				double w = weight[j];
+				weight[j] = weight[i];
+				weight[i] = w;
+
+				int m_inedx = max_index[i];
+				max_index[i] = max_index[j];
+				max_index[j] = m_inedx;
+			}
+		}
+
+	for(int i = 0; i < choose_num; i++)
 	{
+		int now_index = max_index[i];
 		Vec3b color(0,255,0);
-		std::cout<<i<<" "<<cluster[i].size()<<std::endl;
-		if(cluster[i].size() > 0)
+		std::cout<<now_index<<" "<<cluster[now_index].size()<<std::endl;
+		if(cluster[now_index].size() > 0)
 		{
 			double lx = 1000000.0, ly = 1000000.0;
 			double mx = 0.0, my = 0.0;
 
-			for(vector<Point2f>::iterator it = cluster[i].begin(); it != cluster[i].end(); it++)
+			for(vector<Point2f>::iterator it = cluster[now_index].begin(); it != cluster[now_index].end(); it++)
 			{
 				if(it->x < lx)
 					lx = it->x;
@@ -141,34 +170,21 @@ void kmeans(vector<Point2f> bad_feature, vector<Point2f> good_feature, int clust
 				feature.at<Vec3b>(row, col) = color;
 			}
 
-			/*
-			int good_count = 0;
-			for(vector<Point2f>::iterator it = good_feature.begin(); it != good_feature.end(); it++)
+			int lxc = lx;
+			int mxc = mx;
+			int lyc = ly;
+			int myc = my;
+
+			for(int x = lxc; x < mxc; x++)
 			{
-				if(lx < it->x && mx > it->x && ly < it->y && my > it->y)
-					good_count++;
+				feature.at<Vec3b>(x, lyc) = Vec3b(0,0,255);
+				feature.at<Vec3b>(x, myc) = Vec3b(0,0,255);
 			}
-			std::cout<<"good_count: "<<cluster[i].size() - 2 * good_count<<std::endl;
-			*/
 
-			if(cluster_size.count(cluster[i].size()) == 1)
+			for(int y = lyc; y < myc; y++)
 			{
-				int lxc = lx;
-				int mxc = mx;
-				int lyc = ly;
-				int myc = my;
-
-				for(int i = lxc; i < mxc; i++)
-				{
-					feature.at<Vec3b>(i, lyc) = Vec3b(0,0,255);
-					feature.at<Vec3b>(i, myc) = Vec3b(0,0,255);
-				}
-
-				for(int i = lyc; i < myc; i++)
-				{
-					feature.at<Vec3b>(lxc, i) = Vec3b(0,0,255);
-					feature.at<Vec3b>(mxc, i) = Vec3b(0,0,255);
-				}
+				feature.at<Vec3b>(lxc, y) = Vec3b(0,0,255);
+				feature.at<Vec3b>(mxc, y) = Vec3b(0,0,255);
 			}
 		}
 	}
