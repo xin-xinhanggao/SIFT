@@ -14,6 +14,17 @@ void siftWrapper(const Mat &img, vector<KeyPoint> &keypoints, Mat &descriptor) {
 	extractSiftFeatures(gray_img, keypoints, descriptor);
 }
 
+void depictfeature(vector<Point2f> bad_feature, vector<Point2f> good_feature, int cluster_num, Mat &feature)
+{
+	Vec3b color(0,255,0);
+	for(vector<Point2f>::iterator it = bad_feature.begin(); it != bad_feature.end(); it++)
+	{
+		int row = it->x;
+		int col = it->y;
+		feature.at<Vec3b>(row, col) = color;
+	}
+}
+
 void kmeans(vector<Point2f> bad_feature, vector<Point2f> good_feature, int cluster_num, Mat &feature)
 {
 	vector<Point2f> *cluster = new vector<Point2f>[cluster_num]; // initial cluster class
@@ -180,6 +191,11 @@ void kmeans(vector<Point2f> bad_feature, vector<Point2f> good_feature, int clust
 			int mxc = mx;
 			int lyc = ly;
 			int myc = my;
+
+			if(lyc < 100)
+				lyc = 100;
+			if(myc < 100)
+				myc = 100;
 
 			for(int x = lxc; x < mxc; x++)
 			{
