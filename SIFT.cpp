@@ -7,61 +7,60 @@
 
 void extractSiftFeatures(const Mat &img, vector<KeyPoint> &keypoints, Mat &descriptor, int intervals, double sigma,
                          double contrast_thres, int curvature_thres, bool img_dbl, int descr_width, int descr_hist_bins) {
-	Mat init_img = __createInitImg(img, img_dbl, sigma);
-
-	// Smallest dimension of top level is ~ 4 pixels
+	Mat init_img = createInitImg(img, img_dbl, sigma);
+	
 	Size s = init_img.size();
 	int octaves = log(min(s.width, s.height)) / log(2) - 2;
 
 	vector<Mat> gaussian_pyramid;
-	__buildGaussPyramid(init_img, gaussian_pyramid, octaves, intervals, sigma);
+	buildGaussPyramid(init_img, gaussian_pyramid, octaves, intervals, sigma);
 
 	vector<Mat> dog_pyramid;
-	__buildDogPyramid(gaussian_pyramid, dog_pyramid, octaves, intervals);
+	buildDogPyramid(gaussian_pyramid, dog_pyramid, octaves, intervals);
 
 
 	vector<Feature> feats;
-	__scaleSpaceExtrema(dog_pyramid, feats, octaves, intervals, contrast_thres, curvature_thres);
+	scaleSpaceExtrema(dog_pyramid, feats, octaves, intervals, contrast_thres, curvature_thres);
 
-	__calcFeatureScales(feats, sigma, intervals);
+	calcFeatureScales(feats, sigma, intervals);
 
 	if (img_dbl)
-		__adjustForImgDbl(feats);
+		adjustForImgDbl(feats);
 
-	__calcFeatureOris(feats, gaussian_pyramid, intervals + 3);
+	calcFeatureOris(feats, gaussian_pyramid, intervals + 3);
 
-	__computeDescriptors(feats, gaussian_pyramid, intervals + 3, descr_width, descr_hist_bins);
+	computeDescriptors(feats, gaussian_pyramid, intervals + 3, descr_width, descr_hist_bins);
 
-	__feats2KeyPoints(feats, keypoints);
+	feats2KeyPoints(feats, keypoints);
 
-	__featsVec2Mat(feats, descriptor);
+	featsVec2Mat(feats, descriptor);
 }
 
-void __feats2KeyPoints(const vector<Feature> &feats, vector<KeyPoint> &keypoints) {
+void feats2KeyPoints(const vector<Feature> &feats, vector<KeyPoint> &keypoints) {
 	int n = feats.size();
 	keypoints.reserve(n);
 	for (int i = 0; i < n; i ++) {
 		const Feature &feat = feats[i];
-		//std::cout<<feat.__x<<" "<<feat.__y<<std::endl;
+		//std::cout<<feat.x<<" "<<feat.y<<std::endl;
 
-		keypoints.push_back(KeyPoint(feat.__x, feat.__y, SIFT_KEYPOINT_DIAMETER * feat.__scl, feat.__ori,
-		                             abs(feat.__contrast), feat.__octave));
+		keypoints.push_back(KeyPoint(feat.x, feat.y, SIFT_KEYPOINT_DIAMETER * feat.scl, feat.ori,
+		                             abs(feat.contrast), feat.octave));
 	}
 }
 
-void __featsVec2Mat(const vector<Feature> &feats, Mat &mat) {
+void featsVec2Mat(const vector<Feature> &feats, Mat &mat) {
 	int row = feats.size();
-	int col = feats[0].__descriptor.size();
+	int col = feats[0].descriptor.size();
 
 	mat = Mat(row, col, CV_8UC1);
 	for (int r = 0; r < row; r ++) {
 		for (int c = 0; c < col; c ++) {
-			mat.at<unsigned char>(r, c) = feats[r].__descriptor[c];
+			mat.at<unsigned char>(r, c) = feats[r].descriptor[c];
 		}
 	}
 }
 
-Mat __createInitImg(const Mat &img, bool img_dbl, double sigma) {
+Mat createInitImg(const Mat &img, bool img_dbl, double sigma) {
 	if (img_dbl) {
 		Mat init_img(img.size() * 2, CV_32FC1);
 		resize(img, init_img, init_img.size(), 0, 0, INTER_CUBIC);
@@ -78,7 +77,7 @@ Mat __createInitImg(const Mat &img, bool img_dbl, double sigma) {
 	}
 }
 
-void __buildGaussPyramid(const Mat &base, vector<Mat> &gaussian_pyramid, int octaves, int intervals, double sigma) {
+void buildGaussPyramid(const Mat &base, vector<Mat> &gaussian_pyramid, int octaves, int intervals, double sigma) {
 	int layer_per_octave = intervals + 3;
 	vector<double> sigmas(layer_per_octave);
 	double k = pow(2.0f, 1.0f / intervals);
@@ -116,7 +115,7 @@ void __buildGaussPyramid(const Mat &base, vector<Mat> &gaussian_pyramid, int oct
 	}
 }
 
-void __buildDogPyramid(const vector<Mat> &gaussian_pyramid, vector<Mat> &dog_pyramid, int octaves, int intervals) {
+void buildDogPyramid(const vector<Mat> &gaussian_pyramid, vector<Mat> &dog_pyramid, int octaves, int intervals) {
 	int layer_per_octave_dog = intervals + 2;
 	int layer_per_octave_gaussian = intervals + 3;
 	dog_pyramid.reserve(octaves * layer_per_octave_dog);
@@ -129,7 +128,7 @@ void __buildDogPyramid(const vector<Mat> &gaussian_pyramid, vector<Mat> &dog_pyr
 	}
 }
 
-void __scaleSpaceExtrema(const vector<Mat> &dog_pyramid, vector<Feature> &feats, int octaves, int intervals,
+void scaleSpaceExtrema(const vector<Mat> &dog_pyramid, vector<Feature> &feats, int octaves, int intervals,
                          double contrast_thres, int curvature_thres) {
 	double prelim_contrast_thres = 0.5 * contrast_thres / intervals;
 
@@ -145,13 +144,13 @@ void __scaleSpaceExtrema(const vector<Mat> &dog_pyramid, vector<Feature> &feats,
 					float pixel_val = dog.at<float>(r, c);
 					if (abs(pixel_val) <= prelim_contrast_thres)
 						continue;
-					if (!__isExtremum(dog_pyramid, idx, r, c))
+					if (!isExtremum(dog_pyramid, idx, r, c))
 						continue;
 
 					Feature feat;
-					if (!__interpExtremum(dog_pyramid, feat, idx, r, c, intervals, contrast_thres))
+					if (!interpExtremum(dog_pyramid, feat, idx, r, c, intervals, contrast_thres))
 						continue;
-					if (__isTooEdgeLike(dog_pyramid[feat.__idx], feat.__r, feat.__c, curvature_thres))
+					if (isTooEdgeLike(dog_pyramid[feat.idx], feat.r, feat.c, curvature_thres))
 						continue;
 
 					feats.push_back(feat);
@@ -161,7 +160,7 @@ void __scaleSpaceExtrema(const vector<Mat> &dog_pyramid, vector<Feature> &feats,
 	}
 }
 
-bool __isExtremum(const vector<Mat> &dog_pyramid, int idx, int r, int c) {
+bool isExtremum(const vector<Mat> &dog_pyramid, int idx, int r, int c) {
 	float pixel_val = dog_pyramid[idx].at<float>(r, c);
 
 	if (pixel_val > 0) {
@@ -189,14 +188,14 @@ bool __isExtremum(const vector<Mat> &dog_pyramid, int idx, int r, int c) {
 	return true;
 }
 
-bool __interpExtremum(const vector<Mat> &dog_pyramid, Feature &feat, int idx, int r, int c, int intervals, double contrast_thres) {
+bool interpExtremum(const vector<Mat> &dog_pyramid, Feature &feat, int idx, int r, int c, int intervals, double contrast_thres) {
 	int layer_per_octave_dog = intervals + 2;
 	Size s = dog_pyramid[idx].size();
 
 	int i = 0;
 	double xi, xr, xc;
 	while ( i < SIFT_MAX_INTERP_STEPS ) {
-		__interpStep(dog_pyramid, idx, r, c, xi, xr, xc);
+		interpStep(dog_pyramid, idx, r, c, xi, xr, xc);
 		if (abs(xi) < 0.5  &&  abs(xr) < 0.5  &&  abs(xc) < 0.5)
 			break;
 
@@ -216,28 +215,28 @@ bool __interpExtremum(const vector<Mat> &dog_pyramid, Feature &feat, int idx, in
 	if ( i >= SIFT_MAX_INTERP_STEPS )
 		return false;
 
-	double contrast = __interpContrast(dog_pyramid, idx, r, c, xi, xr, xc);
+	double contrast = interpContrast(dog_pyramid, idx, r, c, xi, xr, xc);
 	if (abs( contrast ) < contrast_thres / intervals)
 		return false;
 
 	int octave = idx / layer_per_octave_dog;
-	feat.__x = (c + xc) * pow(2.0, octave);
-	feat.__y = (r + xr) * pow(2.0, octave);
-	feat.__contrast = contrast;
+	feat.x = (c + xc) * pow(2.0, octave);
+	feat.y = (r + xr) * pow(2.0, octave);
+	feat.contrast = contrast;
 
-	feat.__r = r;
-	feat.__c = c;
-	feat.__octave = octave;
-	feat.__interval = idx % layer_per_octave_dog;
-	feat.__idx = idx;
-	feat.__sub_interval = xi;
+	feat.r = r;
+	feat.c = c;
+	feat.octave = octave;
+	feat.interval = idx % layer_per_octave_dog;
+	feat.idx = idx;
+	feat.sub_interval = xi;
 
 	return true;
 }
 
-void __interpStep(const vector<Mat> &dog_pyramid, int idx, int r, int c, double &xi, double &xr, double &xc) {
-	Mat dD = __derivative(dog_pyramid, idx, r, c);
-	Mat H = __hessian(dog_pyramid, idx, r, c);
+void interpStep(const vector<Mat> &dog_pyramid, int idx, int r, int c, double &xi, double &xr, double &xc) {
+	Mat dD = derivative(dog_pyramid, idx, r, c);
+	Mat H = hessian(dog_pyramid, idx, r, c);
 	Mat H_inv = H.inv(DECOMP_SVD);
 	Mat X = - H_inv * dD;
 
@@ -246,7 +245,7 @@ void __interpStep(const vector<Mat> &dog_pyramid, int idx, int r, int c, double 
 	xc = X.at<double>(0, 0);
 }
 
-Mat __derivative(const vector<Mat> &dog_pyramid, int idx, int r, int c) {
+Mat derivative(const vector<Mat> &dog_pyramid, int idx, int r, int c) {
 	Mat dI(3, 1, CV_64FC1);
 	dI.at<double>(0, 0) = (dog_pyramid[idx].at<float>(r, c + 1) - dog_pyramid[idx].at<float>(r, c - 1)) / 2.0;
 	dI.at<double>(1, 0) = (dog_pyramid[idx].at<float>(r + 1, c) - dog_pyramid[idx].at<float>(r - 1, c)) / 2.0;
@@ -255,7 +254,7 @@ Mat __derivative(const vector<Mat> &dog_pyramid, int idx, int r, int c) {
 	return dI;
 }
 
-Mat __hessian(const vector<Mat> &dog_pyramid, int idx, int r, int c) {
+Mat hessian(const vector<Mat> &dog_pyramid, int idx, int r, int c) {
 	Mat H(3, 3, CV_64FC1);
 
 	double v = dog_pyramid[idx].at<float>(r, c);
@@ -282,8 +281,8 @@ Mat __hessian(const vector<Mat> &dog_pyramid, int idx, int r, int c) {
 	return H;
 }
 
-double __interpContrast(const vector<Mat> &dog_pyramid, int idx, int r, int c, double xi, double xr, double xc) {
-	Mat dD = __derivative(dog_pyramid, idx, r, c);
+double interpContrast(const vector<Mat> &dog_pyramid, int idx, int r, int c, double xi, double xr, double xc) {
+	Mat dD = derivative(dog_pyramid, idx, r, c);
 	Mat X(3, 1, CV_64FC1);
 	X.at<double>(2, 0) = xi;
 	X.at<double>(1, 0) = xr;
@@ -293,7 +292,7 @@ double __interpContrast(const vector<Mat> &dog_pyramid, int idx, int r, int c, d
 	return dog_pyramid[idx].at<float>(r, c) + t.at<double>(0, 0) * 0.5;
 }
 
-bool __isTooEdgeLike(const Mat &dog, int r, int c, int curvature_thres) {
+bool isTooEdgeLike(const Mat &dog, int r, int c, int curvature_thres) {
 	double d = dog.at<float>(r, c);
 	double dxx = dog.at<float>(r, c + 1) + dog.at<float>(r, c - 1) - 2 * d;
 	double dyy = dog.at<float>(r + 1, c) + dog.at<float>(r - 1, c) - 2 * d;
@@ -310,23 +309,23 @@ bool __isTooEdgeLike(const Mat &dog, int r, int c, int curvature_thres) {
 	return true;
 }
 
-void __calcFeatureScales(vector<Feature> &feats, double sigma, int intervals) {
+void calcFeatureScales(vector<Feature> &feats, double sigma, int intervals) {
 	for (auto it = feats.begin(); it != feats.end(); it ++) {
-		float interval = (*it).__interval + (*it).__sub_interval;
-		(*it).__scl = sigma * pow(2.0, (*it).__octave + interval / intervals);
-		(*it).__scl_octave = sigma * pow(2.0, interval / intervals);
+		float interval = (*it).interval + (*it).sub_interval;
+		(*it).scl = sigma * pow(2.0, (*it).octave + interval / intervals);
+		(*it).scl_octave = sigma * pow(2.0, interval / intervals);
 	}
 }
 
-void __adjustForImgDbl(vector<Feature> &feats) {
+void adjustForImgDbl(vector<Feature> &feats) {
 	for (auto it = feats.begin(); it != feats.end(); it ++) {
-		(*it).__x /= 2.0;
-		(*it).__y /= 2.0;
-		(*it).__scl /= 2.0;
+		(*it).x /= 2.0;
+		(*it).y /= 2.0;
+		(*it).scl /= 2.0;
 	}
 }
 
-void __calcFeatureOris(vector<Feature> &feats, const vector<Mat> &gaussian_pyramid, int layer_per_octave) {
+void calcFeatureOris(vector<Feature> &feats, const vector<Mat> &gaussian_pyramid, int layer_per_octave) {
 	queue<Feature> feat_queue;
 	size_t n = feats.size();
 	for (size_t i = 0; i < n; i ++) {
@@ -340,15 +339,15 @@ void __calcFeatureOris(vector<Feature> &feats, const vector<Mat> &gaussian_pyram
 
 		for (int c = 0; c < SIFT_ORI_HIST_BINS; c ++)
 			hist[c] = 0;
-		__oriHist(gaussian_pyramid[feat.__octave * layer_per_octave + feat.__interval], hist, feat.__r, feat.__c,
-		          round(SIFT_ORI_RADIUS * feat.__scl_octave), SIFT_ORI_SIG_FCTR * feat.__scl_octave);
+		oriHist(gaussian_pyramid[feat.octave * layer_per_octave + feat.interval], hist, feat.r, feat.c,
+		          round(SIFT_ORI_RADIUS * feat.scl_octave), SIFT_ORI_SIG_FCTR * feat.scl_octave);
 
 		for (int j = 0; j < SIFT_ORI_SMOOTH_PASSES; j++)
-			__smoothOriHist(hist);
+			smoothOriHist(hist);
 
 		double max_ori = *max_element(hist.begin(), hist.end());
 
-		__addGoodOriFeatures(feat_queue, hist, max_ori * SIFT_ORI_PEAK_RATIO, feat);
+		addGoodOriFeatures(feat_queue, hist, max_ori * SIFT_ORI_PEAK_RATIO, feat);
 	}
 
 	n = feat_queue.size();
@@ -359,7 +358,7 @@ void __calcFeatureOris(vector<Feature> &feats, const vector<Mat> &gaussian_pyram
 	}
 }
 
-void __oriHist(const Mat &gaussian, vector<double> &hist, int r, int c, int rad, double sigma) {
+void oriHist(const Mat &gaussian, vector<double> &hist, int r, int c, int rad, double sigma) {
 	double PI_2 = CV_PI * 2.0;
 
 	double exp_denom = 2.0 * sigma * sigma;
@@ -367,7 +366,7 @@ void __oriHist(const Mat &gaussian, vector<double> &hist, int r, int c, int rad,
 	int n = hist.size();
 	for (int i = -rad; i <= rad; i++) {
 		for (int j = -rad; j <= rad; j++) {
-			if (__calcGradMagOri(gaussian, r + i, c + j, mag, ori)) {
+			if (calcGradMagOri(gaussian, r + i, c + j, mag, ori)) {
 				double w = exp(-( i * i + j * j ) / exp_denom);
 				int bin = round( n * ( ori + CV_PI ) / PI_2 );
 				bin = ( bin < n ) ? bin : 0;
@@ -377,7 +376,7 @@ void __oriHist(const Mat &gaussian, vector<double> &hist, int r, int c, int rad,
 	}
 }
 
-bool __calcGradMagOri(const Mat &gaussian, int r, int c, double &mag, double &ori) {
+bool calcGradMagOri(const Mat &gaussian, int r, int c, double &mag, double &ori) {
 	Size s = gaussian.size();
 
 	if (r > 0  &&  r < s.height - 1  &&  c > 0  &&  c < s.width - 1) {
@@ -391,14 +390,14 @@ bool __calcGradMagOri(const Mat &gaussian, int r, int c, double &mag, double &or
 	return false;
 }
 
-void __smoothOriHist(vector<double> &hist) {
+void smoothOriHist(vector<double> &hist) {
 	int n = hist.size();
 	for (int i = 0; i < n; i++ ) {
 		hist[i] = 0.25 * hist[(i + n - 1) % n] + 0.5 * hist[i] + 0.25 * hist[(i + 1) % n];
 	}
 }
 
-void __addGoodOriFeatures(queue<Feature> &feat_queue, const vector<double> &hist, double mag_thres, const Feature &feat) {
+void addGoodOriFeatures(queue<Feature> &feat_queue, const vector<double> &hist, double mag_thres, const Feature &feat) {
 	double PI_2 = CV_PI * 2.0;
 
 	int n = hist.size();
@@ -410,26 +409,26 @@ void __addGoodOriFeatures(queue<Feature> &feat_queue, const vector<double> &hist
 			double bin = i + 0.5 * (hist[l] - hist[r]) / (hist[l] - 2.0 * hist[i] + hist[r]);
 			bin = bin < 0 ? n + bin : bin >= n ? bin - n : bin;
 			Feature new_feat = feat;
-			new_feat.__ori = PI_2 * bin / n - CV_PI;
+			new_feat.ori = PI_2 * bin / n - CV_PI;
 			feat_queue.push(new_feat);
 		}
 	}
 }
 
-void __computeDescriptors(vector<Feature> &feats, const vector<Mat> &gaussian_pyramid, int layer_per_octave, int d, int n) {
+void computeDescriptors(vector<Feature> &feats, const vector<Mat> &gaussian_pyramid, int layer_per_octave, int d, int n) {
 	vector<double> hist(d * d * n);
 	for (auto it = feats.begin(); it != feats.end(); it ++) {
 		for (int i = 0; i < d * d * n; i ++)
 			hist[i] = 0;
 
 		Feature &feat = (*it);
-		__descriptorHist(gaussian_pyramid[feat.__octave * layer_per_octave + feat.__interval], hist,
-		                 feat.__r, feat.__c, feat.__ori, feat.__scl_octave, d, n);
-		__hist2Descriptor(hist, feat, d, n);
+		descriptorHist(gaussian_pyramid[feat.octave * layer_per_octave + feat.interval], hist,
+		                 feat.r, feat.c, feat.ori, feat.scl_octave, d, n);
+		hist2Descriptor(hist, feat, d, n);
 	}
 }
 
-void __descriptorHist(const Mat &gaussian, vector<double> &hist, int r, int c, double ori, double scl, int d, int n) {
+void descriptorHist(const Mat &gaussian, vector<double> &hist, int r, int c, double ori, double scl, int d, int n) {
 	double PI_2 = 2.0 * CV_PI;
 
 	double cos_t = cos( ori );
@@ -448,7 +447,7 @@ void __descriptorHist(const Mat &gaussian, vector<double> &hist, int r, int c, d
 			double cbin = c_rot + d / 2 - 0.5;
 
 			if (rbin > -1.0  &&  rbin < d  &&  cbin > -1.0  &&  cbin < d) {
-				if (__calcGradMagOri(gaussian, r + i, c + j, g_mag, g_ori)) {
+				if (calcGradMagOri(gaussian, r + i, c + j, g_mag, g_ori)) {
 					g_ori -= ori;
 					while ( g_ori < 0.0 )
 						g_ori += PI_2;
@@ -457,14 +456,14 @@ void __descriptorHist(const Mat &gaussian, vector<double> &hist, int r, int c, d
 
 					double obin = g_ori * bins_per_rad;
 					double w = exp(-(c_rot * c_rot + r_rot * r_rot) / exp_denom);
-					__interpHistEntry(hist, rbin, cbin, obin, g_mag * w, d, n);
+					interpHistEntry(hist, rbin, cbin, obin, g_mag * w, d, n);
 				}
 			}
 		}
 	}
 }
 
-void __interpHistEntry(vector<double> &hist, double rbin, double cbin, double obin, double mag, int d, int n) {
+void interpHistEntry(vector<double> &hist, double rbin, double cbin, double obin, double mag, int d, int n) {
 	int r0 = floor( rbin );
 	int c0 = floor( cbin );
 	int o0 = floor( obin );
@@ -493,7 +492,7 @@ void __interpHistEntry(vector<double> &hist, double rbin, double cbin, double ob
 	}
 }
 
-void __hist2Descriptor(const vector<double> &hist, Feature &feat, int d, int n) {
+void hist2Descriptor(const vector<double> &hist, Feature &feat, int d, int n) {
 	vector<double> descriptor(d * d * n);
 	int idx = 0;
 	for (int r = 0; r < d; r++) {
@@ -505,21 +504,21 @@ void __hist2Descriptor(const vector<double> &hist, Feature &feat, int d, int n) 
 		}
 	}
 
-	__normalizeDescriptor(descriptor);
+	normalizeDescriptor(descriptor);
 	for (size_t i = 0; i < descriptor.size(); i++) {
 		if (descriptor[i] > SIFT_DESCR_MAG_THR)
 			descriptor[i] = SIFT_DESCR_MAG_THR;
 	}
-	__normalizeDescriptor(descriptor);
+	normalizeDescriptor(descriptor);
 
-	feat.__descriptor.reserve(d * d * n);
+	feat.descriptor.reserve(d * d * n);
 	for (size_t i = 0; i < descriptor.size(); i++) {
 		int int_val = SIFT_INT_DESCR_FCTR * descriptor[i];
-		feat.__descriptor.push_back(min(255, int_val));
+		feat.descriptor.push_back(min(255, int_val));
 	}
 }
 
-void __normalizeDescriptor(vector<double> &descriptor) {
+void normalizeDescriptor(vector<double> &descriptor) {
 	double len_sq = 0;
 	for (size_t i = 0; i < descriptor.size(); i++) {
 		double cur = descriptor[i];

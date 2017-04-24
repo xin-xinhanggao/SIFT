@@ -25,73 +25,73 @@ using namespace std;
 #define SIFT_KEYPOINT_DIAMETER 2.0
 
 struct Feature {
-	float __x;
-	float __y;
-	float __ori;
-	float __contrast;
-	float __scl;
-	vector<double> __descriptor;
+	float x;
+	float y;
+	float ori;
+	float contrast;
+	float scl;
+	vector<double> descriptor;
 
-	int __r;
-	int __c;
-	int __interval;
-	int __octave;
-	int __idx;
+	int r;
+	int c;
+	int interval;
+	int octave;
+	int idx;
 
-	float __sub_interval;
-	float __scl_octave;
+	float sub_interval;
+	float scl_octave;
 };
 
-static void __feats2KeyPoints(const vector<Feature> &feats, vector<KeyPoint> &keypoints);
+static void feats2KeyPoints(const vector<Feature> &feats, vector<KeyPoint> &keypoints);
 
-static void __featsVec2Mat(const vector<Feature> &feats, Mat &mat);
+static void featsVec2Mat(const vector<Feature> &feats, Mat &mat);
 
-static Mat __createInitImg(const Mat &img, bool img_dbl, double sigma);
+static Mat createInitImg(const Mat &img, bool img_dbl, double sigma);
 
-static void __buildGaussPyramid(const Mat &base, vector<Mat> &gaussian_pyramid, int octaves, int intervals, double sigma);
+static void buildGaussPyramid(const Mat &base, vector<Mat> &gaussian_pyramid, int octaves, int intervals, double sigma);
 
-static void __buildDogPyramid(const vector<Mat> &gaussian_pyramid, vector<Mat> &dog_pyramid, int octaves, int intervals);
+static void buildDogPyramid(const vector<Mat> &gaussian_pyramid, vector<Mat> &dog_pyramid, int octaves, int intervals);
 
-static void __scaleSpaceExtrema(const vector<Mat> &dog_pyramid, vector<Feature> &feats, int octaves, int intervals,
+static void scaleSpaceExtrema(const vector<Mat> &dog_pyramid, vector<Feature> &feats, int octaves, int intervals,
                                 double contrast_thres, int curvature_thres);
 
-static bool __isExtremum(const vector<Mat> &dog_pyramid, int idx, int r, int c);
+static bool isExtremum(const vector<Mat> &dog_pyramid, int idx, int r, int c);
 
-static bool __interpExtremum(const vector<Mat> &dog_pyramid, Feature &feat, int idx, int r, int c, int intervals, double contrast_thres);
+static bool interpExtremum(const vector<Mat> &dog_pyramid, Feature &feat, int idx, int r, int c, int intervals, double contrast_thres);
 
-static void __interpStep(const vector<Mat> &dog_pyramid, int idx, int r, int c, double &xi, double &xr, double &xc);
+static void interpStep(const vector<Mat> &dog_pyramid, int idx, int r, int c, double &xi, double &xr, double &xc);
 
-static Mat __derivative(const vector<Mat> &dog_pyramid, int idx, int r, int c);
+static Mat derivative(const vector<Mat> &dog_pyramid, int idx, int r, int c);
 
-static Mat __hessian(const vector<Mat> &dog_pyramid, int idx, int r, int c);
+static Mat hessian(const vector<Mat> &dog_pyramid, int idx, int r, int c);
 
-static double __interpContrast(const vector<Mat> &dog_pyramid, int idx, int r, int c, double xi, double xr, double xc);
+static double interpContrast(const vector<Mat> &dog_pyramid, int idx, int r, int c, double xi, double xr, double xc);
 
-static bool __isTooEdgeLike(const Mat &dog, int r, int c, int curvature_thres);
+static bool isTooEdgeLike(const Mat &dog, int r, int c, int curvature_thres);
 
-static void __calcFeatureScales(vector<Feature> &feats, double sigma, int intervals);
+static void calcFeatureScales(vector<Feature> &feats, double sigma, int intervals);
 
-static void __adjustForImgDbl(vector<Feature> &feats);
+static void adjustForImgDbl(vector<Feature> &feats);
 
-static void __calcFeatureOris(vector<Feature> &feats, const vector<Mat> &gaussian_pyramid, int layer_per_octave);
+static void calcFeatureOris(vector<Feature> &feats, const vector<Mat> &gaussian_pyramid, int layer_per_octave);
 
-static void __oriHist(const Mat &gaussian, vector<double> &hist, int r, int c, int rad, double sigma);
+static void oriHist(const Mat &gaussian, vector<double> &hist, int r, int c, int rad, double sigma);
 
-static bool __calcGradMagOri(const Mat &gaussian, int r, int c, double &mag, double &ori);
+static bool calcGradMagOri(const Mat &gaussian, int r, int c, double &mag, double &ori);
 
-static void __smoothOriHist(vector<double> &hist);
+static void smoothOriHist(vector<double> &hist);
 
-static void __addGoodOriFeatures(queue<Feature> &feat_queue, const vector<double> &hist, double mag_thres, const Feature &feat);
+static void addGoodOriFeatures(queue<Feature> &feat_queue, const vector<double> &hist, double mag_thres, const Feature &feat);
 
-static void __computeDescriptors(vector<Feature> &feats, const vector<Mat> &gaussian_pyramid, int layer_per_octave, int d, int n);
+static void computeDescriptors(vector<Feature> &feats, const vector<Mat> &gaussian_pyramid, int layer_per_octave, int d, int n);
 
-static void __descriptorHist(const Mat &gaussian, vector<double> &hist, int r, int c, double ori, double scl, int d, int n);
+static void descriptorHist(const Mat &gaussian, vector<double> &hist, int r, int c, double ori, double scl, int d, int n);
 
-static void __interpHistEntry(vector<double> &hist, double rbin, double cbin, double obin, double mag, int d, int n);
+static void interpHistEntry(vector<double> &hist, double rbin, double cbin, double obin, double mag, int d, int n);
 
-static void __hist2Descriptor(const vector<double> &hist, Feature &feat, int d, int n);
+static void hist2Descriptor(const vector<double> &hist, Feature &feat, int d, int n);
 
-static void __normalizeDescriptor(vector<double> &descriptor);
+static void normalizeDescriptor(vector<double> &descriptor);
 
 
 #endif
